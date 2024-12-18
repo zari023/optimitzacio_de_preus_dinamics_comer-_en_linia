@@ -3,7 +3,7 @@ import pandas as pd
 from scipy.optimize import linprog
 
 # Example DataFrame for illustration
-# df = pd.read_csv("your_data.csv")  # Make sure to load your DataFrame here
+df = pd.read_csv("data-2 - copia.csv")  # Make sure to load your DataFrame here
 
 # Preprocess DataFrame
 df = df.dropna()  # Remove missing values
