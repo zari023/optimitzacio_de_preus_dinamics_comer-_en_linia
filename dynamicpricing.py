@@ -17,8 +17,8 @@ base_demand = grouped['Demand'].values
 
 # Setup
 alpha = 0.1
-epsilon = 0.3
-beta = 0.05
+epsilon = 0.1  # Adjusted elasticity
+beta = 0.02  # Adjusted competitor price adjustment rate
 iterations = 5
 
 # Initialize competitor prices dynamically
@@ -57,43 +57,6 @@ for iteration in range(iterations):
         print(f"Optimization failed at iteration {iteration + 1}")
         break
 
-# Plot Iteration-Level Graphs
-for iteration, res in enumerate(results):
-    top_products = res.head(5)  # Focus on top 5 products
-    fig, ax = plt.subplots(figsize=(10, 6))
-
-    # Width and position of bars
-    width = 0.25
-    indices = range(len(top_products))
-
-    # Plot bars for Original, Competitor, and Optimized Prices
-    bars1 = ax.bar(indices, base_prices[:5], width, label='Original Price', color='blue')
-    bars2 = ax.bar([i + width for i in indices], top_products['Competitor'], width, label='Competitor Price', color='red')
-    bars3 = ax.bar([i + 2 * width for i in indices], top_products['Optimized_Price'], width, label='Optimized Price', color='green')
-
-    # Add labels (price values) on top of bars
-    for bar in bars1:
-        height = bar.get_height()
-        ax.text(bar.get_x() + bar.get_width() / 2, height, f'{height:.2f}', ha='center', va='bottom')
-
-    for bar in bars2:
-        height = bar.get_height()
-        ax.text(bar.get_x() + bar.get_width() / 2, height, f'{height:.2f}', ha='center', va='bottom')
-
-    for bar in bars3:
-        height = bar.get_height()
-        ax.text(bar.get_x() + bar.get_width() / 2, height, f'{height:.2f}', ha='center', va='bottom')
-
-    # Customize plot
-    ax.set_xticks([i + width for i in indices])
-    ax.set_xticklabels(top_products['Product'], rotation=45, ha='right')
-    ax.set_title(f"Iteration {iteration + 1}: Original, Competitor, and Optimized Prices")
-    ax.set_xlabel('Product')
-    ax.set_ylabel('Price')
-    ax.legend()
-    plt.tight_layout()
-    plt.show()
-
 # Plot ingresos per iteration
 plt.figure(figsize=(10, 6))
 plt.plot(range(1, len(ingresos_per_iteration) + 1), ingresos_per_iteration, marker='o', color='purple')
@@ -104,23 +67,3 @@ plt.xticks(range(1, len(ingresos_per_iteration) + 1))
 plt.grid(True)
 plt.tight_layout()
 plt.show()
-
-# Plot Product-Level Graphs
-unique_products = results[0]['Product'].head(5)  # Focus on first 5 products
-for product in unique_products:
-    fig, ax = plt.subplots(figsize=(10, 6))
-    demand = [res.loc[res['Product'] == product, 'Demand'].values[0] for res in results]
-    competitor = [res.loc[res['Product'] == product, 'Competitor'].values[0] for res in results]
-    optimized = [res.loc[res['Product'] == product, 'Optimized_Price'].values[0] for res in results]
-    iterations_range = range(1, len(results) + 1)
-
-    ax.plot(iterations_range, demand, label='Demand', marker='o', color='blue')
-    ax.plot(iterations_range, competitor, label='Competitor Price', marker='o', color='red')
-    ax.plot(iterations_range, optimized, label='Optimized Price', marker='o', color='green')
-
-    ax.set_title(f"Product {product}: Demand, Competitor Price, and Optimized Price Over Iterations")
-    ax.set_xlabel('Iteration')
-    ax.set_ylabel('Value')
-    ax.legend()
-    plt.tight_layout()
-    plt.show()
