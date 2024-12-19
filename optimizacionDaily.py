@@ -178,13 +178,25 @@ for product in Productlist:
         plt.tight_layout()
         plt.show()
 #valores de comprobacion
-#ingresos reales
-ingresos_reales = grouped_by_day['Ingresos_Reales'].sum()
-print(f"Ingresos Reales: {ingresos_reales:.2f}")
-#ingresos optimizados
+# Calcular ingresos optimizados
 ingresos_optimizados = grouped_by_day['Ingresos_Optimizados'].sum()
 print(f"Ingresos Optimizados: {ingresos_optimizados:.2f}")
-#ingresos reales menos coste
-ingresos_reales_menos_coste = ingresos_reales - grouped_by_day['Cost'].sum()
-#ingresos optimizados menos coste
-ingresos_optimizados_menos_coste = ingresos_optimizados - grouped_by_day['Cost'].sum()
+
+# Calcular ingresos reales
+ingresos_reales = grouped_by_day['Ingresos_Reales'].sum()
+print(f"Ingresos Reales: {ingresos_reales:.2f}")
+
+# Calcular el costo total basado en la demanda
+grouped_by_day['Coste_Total'] = grouped_by_day['Cost'] * grouped_by_day['Demand']
+coste_total_por_demanda = grouped_by_day['Coste_Total'].sum()
+
+# Mostrar el costo total basado en la demanda
+print(f"Coste Total por Demanda: {coste_total_por_demanda:.2f}")
+
+# Calcular ingresos reales menos coste basado en la demanda
+ingresos_reales_menos_coste_por_demanda = ingresos_reales - coste_total_por_demanda
+print(f"Ingresos Reales - Coste por Demanda: {ingresos_reales_menos_coste_por_demanda:.2f}")
+
+# Calcular ingresos optimizados menos coste basado en la demanda
+ingresos_optimizados_menos_coste_por_demanda = ingresos_optimizados - coste_total_por_demanda
+print(f"Ingresos Optimizados - Coste por Demanda: {ingresos_optimizados_menos_coste_por_demanda:.2f}")
