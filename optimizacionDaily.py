@@ -9,39 +9,40 @@ df = pd.read_csv("data-2 - copia.csv").dropna()
 # Preprocess DataFrame
 grouped = df.groupby('StockCode').agg({'Quantity': 'sum', 'UnitPrice': 'mean'}).reset_index()
 grouped.columns = ['Product', 'Demand', 'Price']
+
 # Adding day-based features to the dataset
-df['InvoiceDate'] = pd.to_datetime(df['InvoiceDate'])  # Ensure InvoiceDate is in datetime format
-df['DayOfWeek'] = df['InvoiceDate'].dt.dayofweek  # Extract day of the week (0=Monday, 6=Sunday)
-df['IsWeekend'] = df['DayOfWeek'].isin([5, 6]).astype(int)  # Flag for weekends
+df['InvoiceDate'] = pd.to_datetime(df['InvoiceDate'])
+df['DayOfWeek'] = df['InvoiceDate'].dt.dayofweek
+df['IsWeekend'] = df['DayOfWeek'].isin([5, 6]).astype(int)
 
 # Aggregate data by StockCode and day of the week
 grouped_by_day = df.groupby(['StockCode', 'DayOfWeek']).agg({
     'Quantity': 'sum',
     'UnitPrice': 'mean',
-    'IsWeekend': 'mean'  # Average to retain weekend vs. weekday insight
+    'IsWeekend': 'mean'
 }).reset_index()
 
-# Rename columns for clarity
 grouped_by_day.columns = ['Product', 'DayOfWeek', 'Demand', 'Price', 'IsWeekend']
 
-# Assume fixed production cost
-# Add a dynamic pricing adjustment for each product by day
-grouped_by_day['Cost'] = grouped_by_day['Price'] * 0.2
+# Add cost and competitor price
 base_prices_day = grouped_by_day['Price'].values
 base_demand_day = grouped_by_day['Demand'].values
-
-# Initialize dynamic competitor prices
+grouped_by_day['Cost'] = grouped_by_day['Price'] * 0.2
 grouped_by_day['Competitor'] = np.maximum(grouped_by_day['Demand'] * 0.02 + 10, grouped_by_day['Cost'] + 1.5)
 
 # Adjusting parameters for daily pricing
-iterations = 20
+iterations = 50  # Allow more iterations for thorough adjustments
 alpha = 0.1
-epsilon = 0.1
-beta = 0.02
+epsilon = 0.02  # Further reduced for stability
+beta = 0.005  # Further reduced for competitor adjustment damping
 
 # Track results for each day and product
 results_daily = []
 ingresos_per_iteration_daily = []
+
+# Convergence threshold
+convergence_threshold = 1e-4  # Stricter threshold for convergence
+previous_ingresos = 0
 
 for iteration in range(iterations):
     grouped_by_day['Competitor'] = np.maximum(grouped_by_day['Competitor'], grouped_by_day['Cost'] + 1.5)
@@ -71,12 +72,20 @@ for iteration in range(iterations):
         grouped_by_day['Ingresos'] = grouped_by_day['Demand'] * grouped_by_day['Optimized_Price']
         ingresos = grouped_by_day['Ingresos'].sum()
         ingresos_per_iteration_daily.append(ingresos)
+
+        # Check for convergence
+        if abs(ingresos - previous_ingresos) < convergence_threshold:
+            print(f"Converged at iteration {iteration + 1} with ingresos: {ingresos:.2f}")
+            break
+        previous_ingresos = ingresos
+
         print(f"Ingressos at iteration {iteration + 1}: {ingresos:.2f}")
 
-        # Update demand and competitor prices for the next iteration
+        # Update demand and competitor prices with stronger damping
         grouped_by_day['Demand'] = np.maximum(
             grouped_by_day['Demand'] * (
-                        1 - epsilon * (grouped_by_day['Optimized_Price'] - base_prices_day) / base_prices_day),
+                1 - epsilon * (grouped_by_day['Optimized_Price'] - base_prices_day) / base_prices_day
+            ),
             5
         )
         grouped_by_day['Competitor'] += beta * (grouped_by_day['Demand'] - base_demand_day)
@@ -106,4 +115,3 @@ grouped_by_day.to_csv("optimized_prices_daily.csv", index=False)
 
 # Display final optimized results for daily pricing
 print(grouped_by_day[['Product', 'DayOfWeek', 'Demand', 'Competitor', 'Original_Price', 'Optimized_Price', 'Ingresos']])
-
