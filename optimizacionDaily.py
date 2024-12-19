@@ -24,11 +24,9 @@ grouped_by_day = df.groupby(['StockCode', 'DayOfWeek']).agg({
 # Rename columns for clarity
 grouped_by_day.columns = ['Product', 'DayOfWeek', 'Demand', 'Price', 'IsWeekend']
 
-# Check the updated DataFrame
-grouped_by_day.head()
 # Assume fixed production cost
 # Add a dynamic pricing adjustment for each product by day
-grouped_by_day['Cost'] = 5.0  # Fixed production cost
+grouped_by_day['Cost'] = grouped_by_day['Price'] * 0.2
 base_prices_day = grouped_by_day['Price'].values
 base_demand_day = grouped_by_day['Demand'].values
 
@@ -36,7 +34,7 @@ base_demand_day = grouped_by_day['Demand'].values
 grouped_by_day['Competitor'] = np.maximum(grouped_by_day['Demand'] * 0.02 + 10, grouped_by_day['Cost'] + 1.5)
 
 # Adjusting parameters for daily pricing
-iterations = 5
+iterations = 20
 alpha = 0.1
 epsilon = 0.1
 beta = 0.02
@@ -70,8 +68,10 @@ for iteration in range(iterations):
         results_daily.append(grouped_by_day[['Product', 'DayOfWeek', 'Demand', 'Competitor', 'Optimized_Price']].copy())
 
         # Calculate revenue
-        ingresos = (grouped_by_day['Demand'] * grouped_by_day['Optimized_Price']).sum()
+        grouped_by_day['Ingresos'] = grouped_by_day['Demand'] * grouped_by_day['Optimized_Price']
+        ingresos = grouped_by_day['Ingresos'].sum()
         ingresos_per_iteration_daily.append(ingresos)
+        print(f"Ingressos at iteration {iteration + 1}: {ingresos:.2f}")
 
         # Update demand and competitor prices for the next iteration
         grouped_by_day['Demand'] = np.maximum(
@@ -84,16 +84,26 @@ for iteration in range(iterations):
         print(f"Optimization failed at iteration {iteration + 1}")
         break
 
-# Plot ingresos per iteration for daily pricing
+# Aggregate ingresos by day of the week
+ingresos_by_day = grouped_by_day.groupby('DayOfWeek')['Ingresos'].sum().reset_index()
+
+# Plot ingresos per day of the week
 plt.figure(figsize=(10, 6))
-plt.plot(range(1, len(ingresos_per_iteration_daily) + 1), ingresos_per_iteration_daily, marker='o', color='blue')
-plt.title("Daily Ingresos per Iteration")
-plt.xlabel("Iteration")
+plt.bar(ingresos_by_day['DayOfWeek'], ingresos_by_day['Ingresos'], color='blue')
+plt.title("Ingresos por Día de la Semana")
+plt.xlabel("Día de la Semana")
 plt.ylabel("Ingresos")
-plt.xticks(range(1, len(ingresos_per_iteration_daily) + 1))
+plt.xticks(ticks=range(7), labels=['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'])
 plt.grid(True)
 plt.tight_layout()
 plt.show()
 
+# Add original price to the final DataFrame
+grouped_by_day['Original_Price'] = base_prices_day
+
+# Save the final DataFrame to a CSV file
+grouped_by_day.to_csv("optimized_prices_daily.csv", index=False)
+
 # Display final optimized results for daily pricing
-print(grouped_by_day[['Product', 'DayOfWeek', 'Demand', 'Competitor', 'Optimized_Price']])
+print(grouped_by_day[['Product', 'DayOfWeek', 'Demand', 'Competitor', 'Original_Price', 'Optimized_Price', 'Ingresos']])
+
